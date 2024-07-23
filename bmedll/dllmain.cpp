@@ -286,16 +286,6 @@ void __fastcall Tier0_ThreadSetDebugName(HANDLE threadHandle, const char* name)
     _SetThreadDescription(threadHandle == 0 ? currentThread : threadHandle, Util::Widen(newName).c_str());
 }
 
-typedef void(__fastcall* sub_18000BAC0_type)(float*, __int64, __int64);
-sub_18000BAC0_type sub_18000BAC0_org = nullptr;
-void __fastcall sub_18000BAC0(float* a1, __int64 a2, __int64 a3)
-{
-    static auto& hudwarp_disable = SDK().GetVstdlibCvar()->FindVar("hudwarp_disable")->GetIntRef();
-    if (hudwarp_disable)
-        return;
-    sub_18000BAC0_org(a1, a2, a3);
-}
-
 typedef void(__fastcall* SQInstance_Finalize_type)(uintptr_t);
 SQInstance_Finalize_type SQInstance_Finalize_org = nullptr;
 void SQInstance_Finalize(uintptr_t thisptr)
@@ -318,7 +308,6 @@ void DoMiscHooks()
     if (!launcherdllBaseAddress) launcherdllBaseAddress = Util::GetModuleBaseAddress("launcher.dll");
     DWORD64 clientdllBaseAddress = Util::GetModuleBaseAddress("client.dll");
     DWORD64 enginedllBaseAddress = Util::GetModuleBaseAddress("engine.dll");
-    DWORD64 vguimatsurfacedllBaseAddress = Util::GetModuleBaseAddress("vguimatsurface.dll");
     CreateMiscHook(launcherdllBaseAddress, 0x6B8E0, &CSourceAppSystemGroup_PreInit, reinterpret_cast<LPVOID*>(&CSourceAppSystemGroup_PreInit_org));
     CreateMiscHook(clientdllBaseAddress, 0x2C4220, &sub_1802C4220, reinterpret_cast<LPVOID*>(&sub_1802C4220_org));
     CreateMiscHook(enginedllBaseAddress, 0x203250, &Base_CmdKeyValues_ReadFromBuffer, reinterpret_cast<LPVOID*>(&Base_CmdKeyValues_ReadFromBuffer_org));
@@ -334,7 +323,6 @@ void DoMiscHooks()
     CreateMiscHook(enginedllBaseAddress, 0x59DE0, &CL_Move, reinterpret_cast<LPVOID*>(&CL_Move_org));
     CreateMiscHook(enginedllBaseAddress, 0x117240, &COM_ExplainDisconnection, reinterpret_cast<LPVOID*>(&COM_ExplainDisconnection_org));
     CreateMiscHookNamed("tier0", "ThreadSetDebugName", &Tier0_ThreadSetDebugName, reinterpret_cast<LPVOID*>(&Tier0_ThreadSetDebugName_org));
-    CreateMiscHook(vguimatsurfacedllBaseAddress, 0xBAC0, &sub_18000BAC0, reinterpret_cast<LPVOID*>(&sub_18000BAC0_org));
     CreateMiscHook(launcherdllBaseAddress, 0x4D6D0, &SQInstance_Finalize, reinterpret_cast<LPVOID*>(&SQInstance_Finalize_org));
 }
 
@@ -490,6 +478,10 @@ void main()
         SPDLOG_DEBUG("DoMiscHooks");
         DoMiscHooks();
 
+        SPDLOG_DEBUG("DoMiscRenderHooks");
+        extern void DoMiscRenderHooks();
+        DoMiscRenderHooks();
+        
         if (MH_EnableHook(MH_ALL_HOOKS) != MH_OK)
         {
             spdlog::error("MH_EnableHook error");
